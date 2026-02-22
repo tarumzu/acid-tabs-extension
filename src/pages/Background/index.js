@@ -166,7 +166,10 @@ const updateTabGroupForRule = async (windowId, groupId, rule) => {
         const tabs = await new Promise(resolve => chrome.tabs.query({ windowId }, resolve));
         const tabsInGroup = tabs.filter(t => t.groupId === groupId);
         const title = group.collapsed && tabsInGroup.length ? `${rule.name} (${tabsInGroup.length})` : rule.name;
-        chrome.tabGroups.update(groupId, { title, color });
+        
+        if (group.title !== title || group.color !== color) {
+            chrome.tabGroups.update(groupId, { title, color });
+        }
     }
 }
 
@@ -199,12 +202,15 @@ const alignTabs = async (windowId) => {
         for (const r of orderedRules) {
             const groupId = await getGroupIdForRule(windowId, r);
             const tabsInGroup = tabs.filter(t => t.groupId === groupId);
-            if (currentTabGroups.some(g => g.id === groupId)) {
-                chrome.tabGroups.move(groupId, { index: offset }, () => {
-                    if (chrome.runtime.lastError) {
-                        console.log(chrome.runtime.lastError.message);
-                    }
-                })
+            const group = currentTabGroups.find(g => g.id === groupId);
+            if (group) {
+                if (group.index !== offset) {
+                    chrome.tabGroups.move(groupId, { index: offset }, () => {
+                        if (chrome.runtime.lastError) {
+                            console.log(chrome.runtime.lastError.message);
+                        }
+                    })
+                }
 
                 offset = offset + tabsInGroup.length;
             }
